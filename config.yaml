@@ -1,0 +1,128 @@
+# Algorithmic Trading System Configuration
+# ==========================================
+
+# Black-Scholes Options Pricing Parameters
+options:
+  # Risk-free interest rate (annualized)
+  # Default: 0 (currently hardcoded in _trade_data_management.py)
+  # TODO: Update to current risk-free rate (e.g., 10-year Treasury yield)
+  risk_free_rate: 0.0
+
+  # Implied volatility (annualized standard deviation)
+  # Default: 0.20 (20%)
+  # TODO: Calculate from historical data or use implied volatility
+  volatility: 0.20
+
+  # Arbitrage threshold (minimum price deviation to trigger trade)
+  # Default: 0.10 ($0.10)
+  arbitrage_threshold: 0.10
+
+# Machine Learning Model Parameters
+ml_trading:
+  # Training window size (seconds)
+  # Number of seconds of historical data to use for training
+  training_window_seconds: 30
+
+  # Prediction window size (seconds)
+  # Number of seconds ahead to predict
+  prediction_window_seconds: 10
+
+  # Cross-validation folds
+  # Number of folds for GridSearchCV
+  cv_folds: 2
+
+  # Random state for reproducibility
+  random_state: 42
+
+  # Models to evaluate (set to false to disable)
+  models:
+    random_forest: true
+    extra_trees: true
+    adaboost: true
+    gradient_boosting: true
+    svc: true
+
+# Order Management Settings
+order_management:
+  # Minimum order size (quantity)
+  min_order_quantity: 1
+
+  # Price tick size (minimum price increment)
+  # Set to null for no restriction
+  price_tick_size: 0.01
+
+  # Maximum order book depth to maintain
+  max_book_depth: 1000
+
+# Data Input Settings
+data:
+  # Default CSV file path for options data
+  options_data_file: "data/market_data.csv"
+
+  # Default CSV file path for ML training data
+  ml_training_data_file: "data/training_data.csv"
+
+  # Timestamp format in CSV files
+  timestamp_format: "%Y-%m-%d %H:%M:%S"
+
+# Risk Management (Future Implementation)
+risk_management:
+  # Maximum position size per instrument
+  max_position_size: 1000
+
+  # Maximum total portfolio delta
+  max_portfolio_delta: 500
+
+  # Stop loss percentage
+  stop_loss_pct: 0.05
+
+  # Maximum drawdown before system halt
+  max_drawdown_pct: 0.10
+
+# API Integration Settings (Future Implementation)
+# These settings will be used when live trading is implemented
+api:
+  # Market data provider
+  # Options: 'alpaca', 'interactive_brokers', 'td_ameritrade', 'polygon'
+  market_data_provider: null
+
+  # Broker for order execution
+  # Options: 'alpaca', 'interactive_brokers', 'td_ameritrade'
+  broker: null
+
+  # API rate limiting (requests per second)
+  rate_limit_rps: 200
+
+  # Connection timeout (seconds)
+  timeout_seconds: 30
+
+  # Enable paper trading mode (simulated trading)
+  paper_trading: true
+
+# Logging Settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+
+  # Log file path
+  file: "logs/trading_system.log"
+
+  # Enable console output
+  console: true
+
+  # Log format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# System Settings
+system:
+  # Time zone for trading operations
+  timezone: "America/New_York"
+
+  # Enable debug mode (verbose output)
+  debug_mode: false
+
+  # Save trade history to file
+  save_trade_history: true
+
+  # Trade history file path
+  trade_history_file: "data/trade_history.csv"
