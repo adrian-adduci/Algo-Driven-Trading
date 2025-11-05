@@ -2,7 +2,7 @@
 
 A modular Python-based algorithmic trading system featuring order matching simulation, Black-Scholes options pricing, and machine learning-based trade prediction.
 
-## ⚠️ **DISCLAIMER**
+## DISCLAIMER
 
 **This system is for EDUCATIONAL and RESEARCH purposes only.**
 
@@ -12,7 +12,7 @@ A modular Python-based algorithmic trading system featuring order matching simul
 - Trading involves substantial risk of loss
 - Past performance does not guarantee future results
 
-## 🎯 Features
+## Features
 
 ### 1. **Order Matching Engine** (`_order_management.py`)
 - Simulates exchange-style order book with price-time priority
@@ -50,7 +50,7 @@ A modular Python-based algorithmic trading system featuring order matching simul
 - **Configuration Management** (`config.yaml`): Centralized parameter control
 - **Environment Variables** (`.env.example`): Secure credential management
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Algo-Driven-Trading/
@@ -67,7 +67,7 @@ Algo-Driven-Trading/
 └── CHANGELOG.md                  # Version history (NEW)
 ```
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 
@@ -113,7 +113,7 @@ cp .env.example .env
 # Note: Current implementation uses CSV files, not live APIs
 ```
 
-## 📖 Usage
+## Usage
 
 ### 1. Order Matching Engine
 
@@ -300,7 +300,7 @@ print(f"Portfolio value: ${account['portfolio_value']:.2f}")
 broker.disconnect()
 ```
 
-## 🧪 Running Tests
+## Running Tests
 
 ```bash
 # Run all unit tests
@@ -318,7 +318,7 @@ The test suite covers:
 - Arbitrage opportunity detection
 - Position and order generation
 
-## ⚙️ Configuration
+## Configuration
 
 ### System Parameters (`config.yaml`)
 
@@ -342,7 +342,7 @@ order_management:
 
 Edit `config.yaml` to adjust system behavior. Note that some parameters are currently hardcoded in the source and will require code changes.
 
-## 📊 Data Formats
+## Data Formats
 
 ### Market Data CSV Format (Options Trading)
 
@@ -376,7 +376,7 @@ Label,Feature1,Feature2,...,Feature64
 - Columns 1-64: Numeric features
 - No header row required (or will be treated as data)
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -405,7 +405,7 @@ pip install -r requirements.txt
 - To change: Edit `_trade_data_management.py` line 290 (`sigma = 0.20`)
 - Future enhancement: Calculate historical volatility or use implied volatility
 
-## 🚦 Roadmap & Future Enhancements
+## Roadmap & Future Enhancements
 
 ### Priority 1: Core Improvements
 - [ ] Externalize hardcoded parameters (risk-free rate, volatility) to `config.yaml`
@@ -442,7 +442,7 @@ pip install -r requirements.txt
 - [ ] Order book visualization
 - [ ] Deep learning models (LSTM, Transformers)
 
-## 🐛 Known Issues & Limitations
+## Known Issues & Limitations
 
 ### Current Limitations
 
@@ -464,7 +464,7 @@ pip install -r requirements.txt
 - ✅ Created configuration framework
 - ✅ Added API integration placeholders
 
-## 📚 Additional Resources
+## Additional Resources
 
 ### Learning Materials
 
@@ -486,7 +486,7 @@ pip install -r requirements.txt
 - **scipy**: https://docs.scipy.org/doc/scipy/
 - **scikit-learn**: https://scikit-learn.org/stable/
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Areas for improvement:
 
@@ -497,11 +497,11 @@ Contributions are welcome! Areas for improvement:
 5. Test coverage expansion
 6. Performance benchmarking
 
-## 📄 License
+## License
 
 This project is provided as-is for educational purposes. Check the repository for specific license terms.
 
-## 🔒 Security Note
+## Security Note
 
 - **Never commit API keys or credentials** to version control
 - Use `.env` file for sensitive data (included in `.gitignore`)
@@ -509,7 +509,7 @@ This project is provided as-is for educational purposes. Check the repository fo
 - Test thoroughly with paper trading before live trading
 - Monitor positions and set appropriate risk limits
 
-## ⚡ Performance Tips
+## Performance Tips
 
 1. **Data Loading**: Cache CSV data to avoid repeated reads
 2. **ML Training**: Use smaller `cv` parameter for faster GridSearch
@@ -517,7 +517,7 @@ This project is provided as-is for educational purposes. Check the repository fo
 4. **Memory Usage**: Process data in chunks for large datasets
 5. **Parallelization**: Run ML models in parallel using `n_jobs=-1`
 
-## 📞 Support
+## Support
 
 For issues, questions, or suggestions:
 - Check existing GitHub issues
@@ -525,7 +525,7 @@ For issues, questions, or suggestions:
 - Consult the inline code documentation
 - Test with the included unit tests
 
-## 📈 Version
+## Version
 
 **Current Version**: 1.1.0 (See [CHANGELOG.md](CHANGELOG.md) for details)
 
