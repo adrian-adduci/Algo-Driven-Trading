@@ -405,43 +405,6 @@ pip install -r requirements.txt
 - To change: Edit `_trade_data_management.py` line 290 (`sigma = 0.20`)
 - Future enhancement: Calculate historical volatility or use implied volatility
 
-## Roadmap & Future Enhancements
-
-### Priority 1: Core Improvements
-- [ ] Externalize hardcoded parameters (risk-free rate, volatility) to `config.yaml`
-- [ ] Add input validation and error handling
-- [ ] Implement logging system
-- [ ] Add data persistence (save/load order books)
-- [ ] Calculate historical volatility from market data
-
-### Priority 2: Live Trading Integration
-- [ ] Implement Alpaca API adapter (stocks)
-- [ ] Implement Interactive Brokers adapter (options)
-- [ ] Add real-time data streaming
-- [ ] Implement WebSocket connections
-- [ ] Add paper trading mode
-
-### Priority 3: Risk Management
-- [ ] Position size limits
-- [ ] Stop-loss orders
-- [ ] Maximum drawdown monitoring
-- [ ] Margin calculations
-- [ ] Portfolio risk metrics (VaR, Sharpe ratio)
-
-### Priority 4: Performance & Monitoring
-- [ ] Database integration (PostgreSQL/TimescaleDB)
-- [ ] Trade history tracking
-- [ ] Performance analytics dashboard
-- [ ] Backtesting framework
-- [ ] Notification system (email, Slack)
-
-### Priority 5: Advanced Features
-- [ ] Additional option pricing models (Binomial, Monte Carlo)
-- [ ] More Greeks (Gamma, Theta, Rho)
-- [ ] Multi-leg option strategies (spreads, straddles)
-- [ ] Order book visualization
-- [ ] Deep learning models (LSTM, Transformers)
-
 ## Known Issues & Limitations
 
 ### Current Limitations
@@ -455,16 +418,6 @@ pip install -r requirements.txt
 7. **No Slippage Modeling**: Perfect execution assumed
 8. **No Transaction Costs**: Commissions and fees not included
 
-### Bugs Fixed in This Version
-
-- ✅ Fixed critical order routing logic (lines 99-107 in `_order_management.py`)
-- ✅ Implemented `cancel_order()` method
-- ✅ Fixed book sorting bugs (lines 319, 434)
-- ✅ Added comprehensive docstrings
-- ✅ Created configuration framework
-- ✅ Added API integration placeholders
-
-## Additional Resources
 
 ### Learning Materials
 
@@ -486,28 +439,10 @@ pip install -r requirements.txt
 - **scipy**: https://docs.scipy.org/doc/scipy/
 - **scikit-learn**: https://scikit-learn.org/stable/
 
-## Contributing
-
-Contributions are welcome! Areas for improvement:
-
-1. Bug fixes and code optimization
-2. Additional ML models and features
-3. Live broker integrations
-4. Documentation improvements
-5. Test coverage expansion
-6. Performance benchmarking
 
 ## License
 
 This project is provided as-is for educational purposes. Check the repository for specific license terms.
-
-## Security Note
-
-- **Never commit API keys or credentials** to version control
-- Use `.env` file for sensitive data (included in `.gitignore`)
-- Enable 2FA on all trading accounts
-- Test thoroughly with paper trading before live trading
-- Monitor positions and set appropriate risk limits
 
 ## Performance Tips
 
@@ -529,6 +464,3 @@ For issues, questions, or suggestions:
 
 **Current Version**: 1.1.0 (See [CHANGELOG.md](CHANGELOG.md) for details)
 
----
-
-**Remember**: This is a research and educational tool. Always practice responsible trading and risk management.
