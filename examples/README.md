@@ -50,9 +50,12 @@ python example_simulated_broker.py
 
 ---
 
-## Future Examples (Coming Soon)
+## Ideas for further examples
 
-### 3. `example_options_arbitrage.py` (TODO)
+These are **not implemented** — they are a backlog, listed so the gaps are
+visible. Nothing below exists in this directory.
+
+### 3. `example_options_arbitrage.py` (not written)
 
 Will demonstrate:
 - Loading options market data from CSV
@@ -61,7 +64,7 @@ Will demonstrate:
 - Generating delta-neutral positions
 - Converting positions to orders
 
-### 4. `example_ml_prediction.py` (TODO)
+### 4. `example_ml_prediction.py` (not written)
 
 Will demonstrate:
 - Preparing ML training data
@@ -70,7 +73,7 @@ Will demonstrate:
 - Model evaluation and comparison
 - Feature importance analysis
 
-### 5. `example_live_data_adapter.py` (TODO)
+### 5. `example_live_data_adapter.py` (not written)
 
 Will demonstrate (when live APIs are implemented):
 - Connecting to market data providers
@@ -78,7 +81,7 @@ Will demonstrate (when live APIs are implemented):
 - Subscribing to data streams
 - Historical data retrieval
 
-### 6. `example_end_to_end_strategy.py` (TODO)
+### 6. `example_end_to_end_strategy.py` (not written)
 
 Will demonstrate a complete trading workflow:
 - Data ingestion
@@ -94,33 +97,30 @@ Will demonstrate a complete trading workflow:
 
 ### Prerequisites
 
-Make sure you've installed the required dependencies:
+From the repository root:
 
 ```bash
-cd ..  # Back to root directory
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
-### Running from Examples Directory
+### Running
+
+Both examples resolve the project root from their own file location, so they
+run from any working directory:
 
 ```bash
-cd examples
-python example_order_matching.py
-python example_simulated_broker.py
+python examples/example_order_matching.py      # from the repo root
 ```
 
-### Running from Root Directory
-
 ```bash
-python examples/example_order_matching.py
-python examples/example_simulated_broker.py
+cd examples && python example_order_matching.py   # or from in here
 ```
 
 ---
 
 ## Creating Your Own Examples
 
-Feel free to create your own example scripts! Here's a template:
+Here's a template:
 
 ```python
 """
@@ -130,11 +130,14 @@ Brief description of what this example demonstrates.
 """
 
 import sys
-sys.path.append('..')  # Add parent directory to path
+from pathlib import Path
 
-# Your imports here
-from _order_management import MatchingEngine
-# etc.
+# Resolve the project root from this file's location. Do NOT use
+# sys.path.append('..') -- that is relative to the *working directory*, so it
+# only works when you happen to run the script from inside examples/.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from _order_management import MatchingEngine  # noqa: E402
 
 
 def main():
@@ -153,6 +156,10 @@ if __name__ == "__main__":
     main()
 ```
 
+If you installed with `pip install -e .`, the `sys.path` block is unnecessary —
+plain `from _order_management import ...` works. It is kept in the shipped
+examples so they also run from a bare checkout.
+
 ---
 
 ## Notes
@@ -168,9 +175,5 @@ if __name__ == "__main__":
 
 - Review the main [README.md](../README.md) for detailed documentation
 - Check the [CHANGELOG.md](../CHANGELOG.md) for recent changes
-- Run the unit tests: `python ../unit_test.py`
+- Run the test suite from the repository root: `pytest`
 - Consult inline code documentation (docstrings)
-
----
-
-Happy Trading! 📈

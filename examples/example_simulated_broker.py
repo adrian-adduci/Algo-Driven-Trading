@@ -5,12 +5,16 @@ This script demonstrates how to use the simulated broker adapter for
 paper trading and testing strategies without risking real money.
 """
 
-import time
 import sys
-sys.path.append('..')  # Add parent directory to path
+import time
+from pathlib import Path
 
-from _order_management import LimitOrder, MarketOrder, OrderSide
-from broker_adapters import create_broker_adapter
+# Resolve the project root from this file's location, not the working
+# directory, so the example runs from anywhere.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from _order_management import LimitOrder, MarketOrder, OrderSide  # noqa: E402
+from broker_adapters import create_broker_adapter  # noqa: E402
 
 
 def main():

@@ -5,16 +5,20 @@ This script demonstrates how to use the order matching engine to simulate
 order book dynamics and trade execution.
 """
 
-import time
 import sys
-sys.path.append('..')  # Add parent directory to path
+import time
+from pathlib import Path
 
-from _order_management import (
-    MatchingEngine,
+# Resolve the project root from this file's location, not the working
+# directory, so the example runs from anywhere.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from _order_management import (  # noqa: E402
+    IOCOrder,
     LimitOrder,
     MarketOrder,
-    IOCOrder,
-    OrderSide
+    MatchingEngine,
+    OrderSide,
 )
 
 
@@ -128,7 +132,7 @@ def main():
     ioc_order = IOCOrder(9, "AAPL", 500, 152.00, OrderSide.BUY, time.time())
     print(f"Submitting IOC BUY order: Price=${ioc_order.price:.2f}, "
           f"Qty={ioc_order.quantity}")
-    print(f"Will fill what's available, cancel remainder")
+    print("Will fill what's available, cancel remainder")
     print()
 
     filled_orders = engine.handle_ioc_order(ioc_order)
@@ -158,7 +162,7 @@ def main():
 
         engine.amend_quantity(order_to_amend.id, new_qty)
 
-        print(f"✓ Order amended successfully")
+        print("✓ Order amended successfully")
         print(f"  Current quantity: {order_to_amend.quantity}")
     else:
         print("No orders available to amend")
@@ -176,7 +180,7 @@ def main():
         success = engine.cancel_order(order_to_cancel.id)
 
         if success:
-            print(f"✓ Order cancelled successfully")
+            print("✓ Order cancelled successfully")
             print(f"  Ask book depth: {len(engine.ask_book)} orders")
         else:
             print("✗ Order not found")
