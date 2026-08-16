@@ -5,6 +5,114 @@ All notable changes to the Algorithmic Trading System are documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-16
+
+Focus of this release: make the repository actually runnable from a clean
+clone. Before it, every entry point failed.
+
+### Fixed
+
+**`_order_management.py`**
+
+- **Fill quantities were always reported as zero.** All six matching branches
+  (limit/market/IOC × buy/sell) appended the order object to `filled_orders`
+  by reference and then set `quantity = 0`, corrupting the record that had
+  just been stored. Fills are now snapshotted before mutation. Any P&L or
+  volume calculation built on the returned list was previously wrong.
+- **`amend_quantity` raised `TypeError` for sell orders.** The ask-side branch
+  used dict-style item assignment (`ask['quantity'] = ...`) on an `Order`
+  object and indexed the book by order id instead of list position. Only the
+  bid path was ever tested.
+- **`handle_order` discarded the fills it dispatched**, always returning
+  `None` despite documenting a return value.
+- Removed a live-but-unreachable debug block and 18 commented-out debug prints.
+- Simplified `insert_limit_order`, whose if/else branches were identical.
+
+**`_trade_management.py`**
+
+- **Removed the embedded test class**, which referenced an undefined
+  `data_string` (`NameError` on import) and constructed `AdaBoostClassifier`
+  with `base_estimator=`, removed in scikit-learn 1.4.
+- **Feature importances are now retained** on `feature_importance` instead of
+  being computed into a discarded local, as the README had claimed.
+  Selection is by estimator capability, not by hardcoded `'SVC'` name.
+- **Rolling windows derive from dataset length** instead of a hardcoded
+  `range(0, 20, ...)` that ignored everything past row 20.
+- `statistics.stdev` no longer raises on a single-window dataset.
+- Renamed `pipline` → `pipeline` and `run_pipline` → `run_pipeline`.
+
+**`_trade_data_management.py`**
+
+- Deduplicated `option_opportunities`, whose `"C"` and `"P"` branches were
+  byte-identical.
+- Extracted `ARBITRAGE_THRESHOLD`, `RISK_FREE_RATE`, and `VOLATILITY` as named
+  constants instead of literals scattered through the module.
+- Removed dead locals (`timestamp`, `max_delta`).
+
+**`examples/`**
+
+- Both scripts failed with `ModuleNotFoundError` unless run from inside
+  `examples/`, because `sys.path.append('..')` resolves against the working
+  directory. Now resolved from the script's own location.
+
+### Changed
+
+- **Replaced `unit_test.py` with a `tests/` pytest suite (76 tests).** The old
+  file imported none of the modules it tested — all 13 tests errored — and its
+  hand-rolled runner swallowed tracebacks and **exited 0 regardless**, so it
+  would have reported success in CI forever. It also defined
+  `test_option_names` twice, silently discarding one test.
+- Sample market data extracted from a Python string literal to
+  `tests/data/sample_market_data.csv`. Dropped a truncated final row that had
+  been malformed in the original source.
+- **Replaced `requirements.txt` with `pyproject.toml`.** Old pins
+  (`pandas<2.0`, `numpy<2.0`, `scikit-learn<1.4`) could not install on modern
+  Python. Verified against pandas 3.0 / numpy 2.5 / scikit-learn 1.9.
+- Rewrote `README.md`; every snippet in it is executed before commit.
+
+### Added
+
+- GitHub Actions CI: lint + tests + examples on Python 3.10–3.13.
+- `LICENSE` (MIT). The README previously referred to license terms that did not exist.
+- Ruff configuration; the tree is lint-clean.
+
+### Documentation
+
+Corrected copy that described features, files, or behaviour that did not exist:
+
+- **`config.yaml` and `.env.example` are now labelled as reference documents.**
+  Neither is read by any code — nothing calls `yaml.safe_load` or
+  `load_dotenv` — but both were written as though editing them changed
+  runtime behaviour. Each now says so at the top and points at the actual
+  source constants. Aspirational sections (risk management, logging, API
+  integration, order-management limits) are marked as such.
+- **Dropped `PyYAML` and `python-dotenv` from dependencies.** They were
+  declared but never imported, a consequence of the above.
+- **`examples/README.md`** told readers to run `pip install -r
+  requirements.txt` and `python ../unit_test.py`, both now deleted, and its
+  "write your own example" template taught the `sys.path.append('..')` pattern
+  that broke the shipped examples. All corrected.
+- **Moved documents describing unbuilt work out of the repository root**, so
+  the root reflects what exists. `USER_GUIDE.md` and `CRYPTO_FRONTEND_PLAN.md`
+  moved to `docs/proposals/`; `IMPLEMENTATION_SUMMARY.md` moved to
+  `docs/archive/`. Each carries a banner explaining its status, and
+  `docs/README.md` indexes them. Moves used `git mv`, so history is preserved.
+  Together these were ~3,000 lines of markdown — more than the codebase —
+  presented alongside the README as though they described the system.
+  `USER_GUIDE.md` in particular read as operating instructions for a live
+  product that does not exist.
+- Replaced the retired TD Ameritrade developer API with Schwab in
+  `.env.example` and `config.yaml`.
+
+### Known issues (documented, not fixed)
+
+- `GridSearchCV` inside the walk-forward loop uses default K-fold rather than
+  `TimeSeriesSplit`.
+- No feature scaling, so SVC is handicapped against the tree ensembles.
+- `create_positions` keeps per-instrument state in module-level `globals()`.
+- `create_orders` drops the opening row, so a position opened at the first
+  timestamp is never emitted as an order.
+
 ## [1.1.0] - 2025-11-04
 
 ### 🐛 Critical Bug Fixes

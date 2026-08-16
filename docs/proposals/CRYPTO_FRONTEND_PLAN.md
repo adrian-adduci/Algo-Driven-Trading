@@ -1,8 +1,18 @@
 # Crypto Trading Frontend Implementation Plan
 
+> **⚠️ Proposal only — none of this has been built.**
+>
+> No frontend, backend API, database, WebSocket layer, or crypto exchange
+> integration exists in this repository. Nothing in the file tree, schema, or
+> phase plan below has been implemented.
+>
+> For the code that does exist, see [README.md](../../README.md). The companion
+> document [USER_GUIDE.md](USER_GUIDE.md) describes the same unbuilt platform
+> from a user's perspective.
+
 **Project:** Algorithmic Cryptocurrency Trading Platform
 **Date:** January 6, 2026
-**Status:** Planning Phase
+**Status:** Planning phase — not started
 
 ---
 

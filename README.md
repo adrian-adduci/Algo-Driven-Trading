@@ -1,466 +1,318 @@
 # Algorithmic Trading System
 
-A modular Python-based algorithmic trading system featuring order matching simulation, Black-Scholes options pricing, and machine learning-based trade prediction.
+A Python implementation of three building blocks of an equity/options trading stack:
+an exchange-style **order matching engine**, a **Black-Scholes options arbitrage**
+strategy, and a **rolling-window ML pipeline** for short-horizon trade prediction.
 
-## DISCLAIMER
+Built as a portfolio/educational project. Every code sample below is executed
+against the real API before being committed.
 
-**This system is for EDUCATIONAL and RESEARCH purposes only.**
+## Disclaimer
 
-- This software does NOT connect to real brokers or execute real trades
-- No warranty is provided - use at your own risk
-- Always test thoroughly with paper trading before considering live trading
-- Trading involves substantial risk of loss
-- Past performance does not guarantee future results
+**Educational and research use only.**
 
-## Features
+- Does not connect to real brokers and does not execute real trades.
+- No warranty. Trading involves substantial risk of loss.
+- Past performance does not guarantee future results.
 
-### 1. **Order Matching Engine** (`_order_management.py`)
-- Simulates exchange-style order book with price-time priority
-- Supports multiple order types:
-  - **Limit Orders**: Execute at specified price or better
-  - **Market Orders**: Execute immediately at best available price
-  - **IOC Orders**: Immediate-or-cancel execution
-- Full order lifecycle management (submit, amend, cancel)
-- Maintains separate bid/ask books with automatic matching
+---
 
-### 2. **Options Arbitrage Trading** (`_trade_data_management.py`)
-- Black-Scholes option pricing model implementation
-- Greeks calculation (Delta, Vega)
-- Statistical arbitrage strategy:
-  - Identifies mispricing between market and theoretical prices
-  - Generates delta-neutral positions
-  - Automatic hedging with underlying stock
-- Configurable arbitrage threshold ($0.10 default)
+## Install
 
-### 3. **Machine Learning Trade Prediction** (`_trade_management.py`)
-- Multiple ML models with automated hyperparameter tuning:
-  - Random Forest
-  - Extra Trees
-  - AdaBoost
-  - Gradient Boosting
-  - Support Vector Classifier (SVC)
-- Rolling window training (30-second windows)
-- GridSearchCV for parameter optimization
-- Performance metrics: Accuracy, F1-score
-- Feature importance analysis
-
-### 4. **Integration Framework** (New)
-- **Data Adapters** (`data_adapters.py`): Abstract interfaces for market data
-- **Broker Adapters** (`broker_adapters.py`): Abstract interfaces for order execution
-- **Configuration Management** (`config.yaml`): Centralized parameter control
-- **Environment Variables** (`.env.example`): Secure credential management
-
-## Project Structure
-
-```
-Algo-Driven-Trading/
-├── _order_management.py          # Order matching engine
-├── _trade_data_management.py     # Options pricing & arbitrage
-├── _trade_management.py          # ML trade prediction
-├── unit_test.py                  # Comprehensive unit tests
-├── data_adapters.py              # Market data integration (NEW)
-├── broker_adapters.py            # Broker integration (NEW)
-├── config.yaml                   # System configuration (NEW)
-├── .env.example                  # API credentials template (NEW)
-├── requirements.txt              # Python dependencies (NEW)
-├── README.md                     # This file (NEW)
-└── CHANGELOG.md                  # Version history (NEW)
-```
-
-## Installation
-
-### Prerequisites
-
-- Python 3.7 or higher
-- pip (Python package manager)
-- Git (optional, for cloning)
-
-### Step 1: Clone or Download
+Requires Python 3.10+.
 
 ```bash
-# Using Git
-git clone <repository-url>
+git clone https://github.com/adrian-adduci/Algo-Driven-Trading
 cd Algo-Driven-Trading
 
-# Or download and extract the ZIP file
-```
-
-### Step 2: Create Virtual Environment (Recommended)
-
-```bash
-# On Windows
-python -m venv venv
-venv\Scripts\activate
-
-# On macOS/Linux
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+pip install -e ".[dev]"
 ```
 
-### Step 3: Install Dependencies
+Installing in editable mode puts the modules on your path, so the examples and
+tests work from any directory.
+
+## Run the tests
 
 ```bash
-pip install -r requirements.txt
+pytest
 ```
 
-### Step 4: Configuration (Optional)
+```
+76 passed
+```
+
+Lint with `ruff check .`. CI runs both across Python 3.10–3.13 on every push.
+
+## Run the examples
 
 ```bash
-# Copy example configuration
-cp .env.example .env
-
-# Edit .env with your API keys (if planning to add live data)
-# Note: Current implementation uses CSV files, not live APIs
+python examples/example_order_matching.py
+python examples/example_simulated_broker.py
 ```
 
-## Usage
+---
 
-### 1. Order Matching Engine
+## 1. Order matching engine (`_order_management.py`)
+
+Exchange-style limit order book with price-time priority. Supports limit,
+market, and IOC orders, plus amend and cancel.
 
 ```python
 import time
-from _order_management import (
-    MatchingEngine, LimitOrder, MarketOrder, IOCOrder,
-    OrderSide
-)
+from _order_management import MatchingEngine, LimitOrder, MarketOrder, OrderSide
 
-# Create matching engine
 engine = MatchingEngine()
 
-# Submit a buy limit order
-buy_order = LimitOrder(
-    id=1,
-    symbol="AAPL",
-    quantity=100,
-    price=150.50,
-    side=OrderSide.BUY,
-    time=time.time()
-)
+engine.handle_limit_order(LimitOrder(1, "AAPL", 100, 150.00, OrderSide.BUY, time.time()))
+engine.handle_limit_order(LimitOrder(2, "AAPL", 50, 150.50, OrderSide.BUY, time.time()))
 
-filled_orders = engine.handle_limit_order(buy_order)
-print(f"Filled {len(filled_orders)} orders")
+filled = engine.handle_market_order(MarketOrder(3, "AAPL", 60, OrderSide.SELL, time.time()))
 
-# Submit a sell limit order (will match if price crosses)
-sell_order = LimitOrder(
-    id=2,
-    symbol="AAPL",
-    quantity=50,
-    price=150.00,
-    side=OrderSide.SELL,
-    time=time.time()
-)
+for fill in filled:
+    print(f"order {fill.id}: {fill.quantity} @ {fill.price}")
 
-filled_orders = engine.handle_limit_order(sell_order)
+print(f"bid book depth: {len(engine.bid_book)}")
 
-# Submit market order
-market_order = MarketOrder(
-    id=3,
-    symbol="AAPL",
-    quantity=25,
-    side=OrderSide.BUY,
-    time=time.time()
-)
-
-filled_orders = engine.handle_market_order(market_order)
-
-# Amend order quantity (reduce only)
-engine.amend_quantity(order_id=1, quantity=50)
-
-# Cancel order
-engine.cancel_order(order_id=1)
-
-# Check order books
-print(f"Bid book depth: {len(engine.bid_book)}")
-print(f"Ask book depth: {len(engine.ask_book)}")
+engine.amend_quantity(1, 40)     # reductions only
+engine.cancel_order(1)
 ```
 
-### 2. Options Arbitrage Trading
+```
+order 2: 50 @ 150.5
+order 3: 10 @ 150.0
+order 1: 10 @ 150.0
+bid book depth: 1
+```
+
+**Reading the fill list.** `filled` records *both* sides of each trade — the
+resting orders and the aggressor. The aggressor appears once, on the level that
+fully consumes it, not once per level swept. To compute traded volume, filter by
+order id or side rather than summing the whole list.
+
+`handle_order(order)` dispatches to the right handler by order type and returns
+the same fill list.
+
+## 2. Options arbitrage (`_trade_data_management.py`)
+
+Prices calls and puts with Black-Scholes, compares theoretical to quoted prices,
+and builds delta-neutral positions hedged with the underlying.
 
 ```python
 import _trade_data_management as tdm
 
-# Step 1: Read market data from CSV
-time_to_expiry, market_data = tdm.read_data('data/market_data.csv')
-
-# CSV format required:
-# Time, TimeToExpiry, BidPrice-Stock, BidVolume-Stock, AskPrice-Stock,
-# AskVolume-Stock, BidPrice-P60, BidVolume-P60, AskPrice-P60, ...
-
-# Step 2: Get option names
+time_to_expiry, market_data = tdm.read_data("tests/data/sample_market_data.csv")
 option_names = tdm.get_list_of_all_instruments(market_data)
-print(f"Options found: {option_names}")  # e.g., ['P60', 'P70', 'C60', 'C70']
+timestamp = market_data.index
 
-# Step 3: Add time-to-expiry to market data
 market_data = tdm.set_tte_to_market_data(market_data, time_to_expiry)
-
-# Step 4: Calculate Black-Scholes theoretical values
 option_values, option_deltas = tdm.create_df_to_store_options_values_delta(
     market_data, option_names
 )
-
-# Step 5: Merge theoretical values into market data
 market_data = tdm.add_blacksholes_data_to_market_data(
     market_data, option_names, option_values, option_deltas
 )
 
-# Step 6: Find arbitrage opportunities
-short_opps, long_opps = tdm.option_opportunities('C60', market_data)
-print(f"Found {len(short_opps)} short opportunities")
-print(f"Found {len(long_opps)} long opportunities")
+short_opps, long_opps = tdm.option_opportunities("C80", market_data)
+print(f"C80: {len(short_opps)} short, {len(long_opps)} long opportunities")
 
-# Step 7: Generate delta-neutral positions
-timestamp = market_data.index
 positions = tdm.create_positions(market_data, option_names, timestamp)
-
-# Step 8: Convert positions to executable orders
 trades, final_positions = tdm.create_orders(positions)
-
-print(f"Generated {len(trades)} trade signals")
-print(f"\nFinal positions:")
-print(final_positions)
 ```
 
-### 3. Machine Learning Trade Prediction
-
-```python
-import pandas as pd
-from _trade_management import Model_Selection
-
-# Prepare data
-# Format: Column 0 = label (0 or 1), Columns 1-64 = features
-df = pd.read_csv('data/training_data.csv')
-
-# Initialize model selection with multiple algorithms
-ms = Model_Selection(df)
-
-# Run full pipeline: train, tune, and evaluate all models
-ms.pipeline(latest_sec=30, pred_sec=10, cv=2)
-
-# Get performance summary
-summary = ms.score_summary()
-
-print("\nModel Performance Ranking:")
-print(summary)
-
-# Best model details
-best_model = summary.iloc[0]
-print(f"\nBest Model: {best_model['Model']}")
-print(f"Test Accuracy: {best_model['Test Accuracy Mean']:.4f} ± {best_model['Test Accuracy Std']:.4f}")
-print(f"F1 Score: {best_model['Test F1 Mean']:.4f}")
-
-# Feature importance (for tree-based models)
-if 'Feature Importance' in best_model:
-    print(f"\nTop Features: {best_model['Feature Importance']}")
+```
+C80: 0 short, 0 long opportunities
 ```
 
-### 4. Using Data and Broker Adapters (New)
+**The bundled sample data contains no arbitrage.** It was generated under the
+same Black-Scholes assumptions the strategy uses, so quoted and theoretical
+prices agree and the strategy correctly does nothing. To see the strategy
+trade, perturb an instrument's quotes — `tests/conftest.py` does exactly this
+via the `mispriced_market_data_path` fixture.
+
+Strategy parameters live at the top of the module:
+
+| Constant | Default | Meaning |
+|---|---|---|
+| `ARBITRAGE_THRESHOLD` | `0.10` | Minimum edge in dollars before trading |
+| `RISK_FREE_RATE` | `0.0` | Discount rate (flat) |
+| `VOLATILITY` | `0.20` | Volatility assumption (flat) |
+
+## 3. ML trade prediction (`_trade_management.py`)
+
+Walk-forward model selection: for each rolling window, grid-search every
+candidate model on the trailing `latest_sec` rows and score it on the next
+`pred_sec` rows. Models never see their own test window during fitting.
 
 ```python
-from data_adapters import create_data_adapter, CSVDataAdapter
-from broker_adapters import create_broker_adapter, SimulatedBrokerAdapter
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from _trade_management import run_pipeline
 
-# Create CSV data adapter
-data_adapter = create_data_adapter('csv', filename='data/market_data.csv')
-data_adapter.connect()
+models = {
+    "RandomForestClassifier": RandomForestClassifier(random_state=0),
+    "AdaBoostClassifier": AdaBoostClassifier(
+        estimator=DecisionTreeClassifier(), n_estimators=10, random_state=0
+    ),
+}
+grids = {
+    "RandomForestClassifier": {"n_estimators": [10, 25], "max_depth": [3, 5]},
+    "AdaBoostClassifier": {"estimator__max_depth": [1, 2]},
+}
 
-# Get stock quote
-quote = data_adapter.get_stock_quote('Stock')
-print(f"Bid: ${quote['bid_price']} Ask: ${quote['ask_price']}")
+# `frame`: column '0' is the binary label, columns '1'..'64' are features.
+selector = run_pipeline(models, grids, [frame], latest_sec=30, pred_sec=10, day=1)
 
-# Get options chain
-options = data_adapter.get_options_chain('Stock', '2024-01-15')
+print(selector.summary_day[0].to_string(index=False))
 
-data_adapter.disconnect()
+best = selector.summary_day[0].iloc[0]
+print(f"best model: {best['Estimator']} (accuracy {best['Accuracy_mean']:.3f})")
 
-# Create simulated broker
-broker = create_broker_adapter('simulated')
+top = selector.feature_importance["RandomForestClassifier"][0]
+print("top features:", [name for name, _score in top])
+```
+
+```
+             Estimator  Accuracy_mean  Accuracy_std  Accuracy_max  Accuracy_min  F_score
+    AdaBoostClassifier            1.0      0.000000           1.0           1.0  1.00000
+RandomForestClassifier            0.7      0.173205           0.8           0.5  0.62037
+
+best model: AdaBoostClassifier (accuracy 1.000)
+top features: ['1', '64', '11', '38', '42']
+```
+
+(That run uses synthetic data whose label is a direct function of feature `1`,
+which is why AdaBoost scores 1.0. Do not read it as a performance claim.)
+
+`feature_importance[model]` holds one ranked top-5 list per rolling window,
+taken from `feature_importances_` for tree ensembles or `coef_` for linear
+models. Estimators exposing neither (e.g. RBF-kernel SVC) are skipped.
+
+## 4. Data and broker adapters
+
+Abstract interfaces separating strategy code from data sources and execution
+venues. Only the CSV data adapter and the simulated broker are implemented; the
+rest are scaffolding for future work.
+
+```python
+from data_adapters import create_data_adapter
+from broker_adapters import create_broker_adapter
+
+data = create_data_adapter("csv", filename="tests/data/sample_market_data.csv")
+data.connect()
+quote = data.get_stock_quote("Stock")
+print(f"stock bid {quote['bid_price']} / ask {quote['ask_price']}")
+data.disconnect()
+
+broker = create_broker_adapter("simulated")
 broker.connect()
-
-# Submit orders
-from _order_management import LimitOrder, OrderSide
-import time
-
-order = LimitOrder(1, "AAPL", 100, 150.00, OrderSide.BUY, time.time())
-order_id = broker.submit_order(order)
-print(f"Order submitted: {order_id}")
-
-# Check order status
-status = broker.get_order_status(order_id)
-print(f"Order status: {status}")
-
-# Get positions
-positions = broker.get_positions()
-print(f"Current positions: {positions}")
-
-# Get account info
-account = broker.get_account_info()
-print(f"Cash: ${account['cash']:.2f}")
-print(f"Portfolio value: ${account['portfolio_value']:.2f}")
-
+order_id = broker.submit_order(LimitOrder(1, "AAPL", 100, 150.00, OrderSide.BUY, time.time()))
+print(broker.get_account_info()["cash"])
 broker.disconnect()
 ```
 
-## Running Tests
-
-```bash
-# Run all unit tests
-python unit_test.py
-
-# Expected output: OK (6 tests for each module)
+```
+stock bid 70.7 / ask 70.9
+100000.0
 ```
 
-The test suite covers:
-- Order insertion and matching logic
-- Market and IOC order handling
-- Order amendments and cancellations
-- Options data processing
-- Black-Scholes calculations
-- Arbitrage opportunity detection
-- Position and order generation
+---
+
+## Data formats
+
+### Options market data
+
+```csv
+Time,BidPrice-Stock,BidVolume-Stock,AskPrice-Stock,AskVolume-Stock,TimeToExpiry,BidPrice-P60,...
+2018-01-01 00:05:00,70.7,120.0,70.9,120.0,0.9116,1.3,...
+```
+
+- `Time` — timestamp index
+- `TimeToExpiry` — years to expiration
+- `{Bid,Ask}{Price,Volume}-Stock` — underlying quotes
+- `{Bid,Ask}{Price,Volume}-{Option}` — option quotes, where `{Option}` is
+  `P##` (put, strike ##) or `C##` (call, strike ##)
+
+A working 76-row example is at `tests/data/sample_market_data.csv`.
+
+### ML training data
+
+A DataFrame per trading day. Column `'0'` is the binary label; remaining columns
+are numeric features. Needs at least `latest_sec + pred_sec` rows for one window.
+
+---
+
+## Project structure
+
+```
+Algo-Driven-Trading/
+├── _order_management.py        # Matching engine, order types
+├── _trade_data_management.py   # Black-Scholes, arbitrage, positions
+├── _trade_management.py        # Rolling-window model selection
+├── data_adapters.py            # Market data interfaces (CSV implemented)
+├── broker_adapters.py          # Execution interfaces (simulated implemented)
+├── config.yaml                 # Reference parameter values (NOT loaded at runtime)
+├── .env.example                # Credential placeholders (NOT read at runtime)
+├── pyproject.toml              # Dependencies, pytest and ruff config
+├── examples/                   # Runnable demonstrations
+├── tests/                      # pytest suite + sample market data
+├── .github/workflows/ci.yml    # Lint + test on Python 3.10-3.13
+├── CHANGELOG.md                # Version history
+└── docs/
+    ├── proposals/              # Designs for unbuilt work (crypto frontend)
+    └── archive/                # Superseded status documents
+```
+
+Everything under `docs/proposals/` describes a planned web interface that **is
+not implemented**. It is kept for design context, not as a description of this
+codebase. See [docs/README.md](docs/README.md).
 
 ## Configuration
 
-### System Parameters (`config.yaml`)
+There is no config loader yet. **`config.yaml` and `.env.example` are reference
+documents — no code reads either one.** Editing them changes nothing.
 
-```yaml
-options:
-  risk_free_rate: 0.0        # Currently hardcoded in code
-  volatility: 0.20            # 20% volatility assumption
-  arbitrage_threshold: 0.10   # $0.10 minimum price deviation
+To change behaviour today, edit the named constants in the source:
 
-ml_trading:
-  training_window_seconds: 30
-  prediction_window_seconds: 10
-  cv_folds: 2
-  random_state: 42
+| Setting | Where |
+|---|---|
+| Risk-free rate | `RISK_FREE_RATE` in `_trade_data_management.py` |
+| Volatility | `VOLATILITY` in `_trade_data_management.py` |
+| Arbitrage threshold | `ARBITRAGE_THRESHOLD` in `_trade_data_management.py` |
+| Training / prediction window | `latest_sec` / `pred_sec` args to `run_pipeline()` |
 
-order_management:
-  min_order_quantity: 1
-  price_tick_size: 0.01
-  max_book_depth: 1000
-```
+Neither working integration (the CSV data adapter and the simulated broker)
+requires credentials.
 
-Edit `config.yaml` to adjust system behavior. Note that some parameters are currently hardcoded in the source and will require code changes.
+## Known limitations
 
-## Data Formats
+Honest accounting of what this does not do:
 
-### Market Data CSV Format (Options Trading)
+1. **No live data or execution** — CSV in, simulated fills out.
+2. **Flat rate and volatility** — no yield curve, no implied or historical vol.
+3. **No transaction costs, slippage, or margin** — fills are frictionless.
+4. **Inner CV is not time-aware** — the walk-forward train/test split is correct,
+   but `GridSearchCV` inside it uses default K-fold, which interleaves
+   validation rows in time. `TimeSeriesSplit` would be the correct choice.
+5. **No feature scaling** — distance/kernel-based estimators (e.g. SVC) are
+   handicapped relative to the tree ensembles they are ranked against.
+6. **`create_positions` uses module-level globals** for per-instrument state,
+   so it is not reentrant and leaks state between calls.
+7. **`create_orders` drops the opening row** (`positions.diff()[1:]`), so a
+   position established at the first timestamp is never emitted as an order.
+8. **Single underlying** — the options module assumes one stock.
+9. **No persistence** — order books are in-memory only.
 
-```csv
-Time,TimeToExpiry,BidPrice-Stock,BidVolume-Stock,AskPrice-Stock,AskVolume-Stock,BidPrice-P60,BidVolume-P60,AskPrice-P60,AskVolume-P60,...
-1623456789,0.0833,70.25,100,70.30,150,0.50,50,0.55,75,...
-```
+## References
 
-**Required columns:**
-- `Time`: Unix timestamp or datetime
-- `TimeToExpiry`: Time to option expiration (years)
-- `BidPrice-Stock`, `BidVolume-Stock`: Stock bid data
-- `AskPrice-Stock`, `AskVolume-Stock`: Stock ask data
-- `BidPrice-{Option}`, `BidVolume-{Option}`: Option bid data (e.g., P60, C70)
-- `AskPrice-{Option}`, `AskVolume-{Option}`: Option ask data
-
-**Option naming convention:**
-- `P##`: Put option with strike price ## (e.g., P60 = Put $60 strike)
-- `C##`: Call option with strike price ## (e.g., C70 = Call $70 strike)
-
-### ML Training Data Format
-
-```csv
-Label,Feature1,Feature2,...,Feature64
-0,0.512,1.234,...,0.892
-1,-0.234,0.567,...,1.123
-```
-
-**Format:**
-- First column: Binary label (0 or 1)
-- Columns 1-64: Numeric features
-- No header row required (or will be treated as data)
-
-## Troubleshooting
-
-### Common Issues
-
-**1. ImportError: No module named 'scipy' / 'pandas' / 'sklearn'**
-```bash
-# Solution: Install dependencies
-pip install -r requirements.txt
-```
-
-**2. Order matching not working**
-- **Fixed in this version**: The original code had a critical bug in `handle_order()` using `!=` instead of `==`
-- Ensure you're using the updated `_order_management.py`
-
-**3. cancel_order() not implemented**
-- **Fixed in this version**: The method now properly removes orders from books
-
-**4. Book sorting errors**
-- **Fixed in this version**: Corrected book assignment bugs on lines 319 and 434
-
-**5. "Risk-free rate is 0" warning**
-- This is expected - risk-free rate is currently hardcoded to 0
-- To change: Edit `_trade_data_management.py` line 289 (`r = 0`)
-
-**6. "Volatility is fixed at 20%"**
-- This is expected - volatility is currently hardcoded to 0.20
-- To change: Edit `_trade_data_management.py` line 290 (`sigma = 0.20`)
-- Future enhancement: Calculate historical volatility or use implied volatility
-
-## Known Issues & Limitations
-
-### Current Limitations
-
-1. **No Live Data**: System only reads from CSV files
-2. **No Order Execution**: No connection to real brokers
-3. **Hardcoded Parameters**: Risk-free rate and volatility are fixed
-4. **Simplified Risk Model**: No margin requirements or position limits
-5. **No Persistence**: Order books cleared on restart
-6. **Single Asset**: Options module designed for one underlying stock
-7. **No Slippage Modeling**: Perfect execution assumed
-8. **No Transaction Costs**: Commissions and fees not included
-
-
-### Learning Materials
-
-- **Options Pricing**: [Black-Scholes Model](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model)
-- **Order Books**: [Understanding Market Microstructure](https://www.investopedia.com/terms/o/order-book.asp)
-- **Machine Learning for Trading**: [scikit-learn documentation](https://scikit-learn.org/)
-
-### API Documentation
-
-- **Alpaca**: https://alpaca.markets/docs/
-- **Interactive Brokers**: https://interactivebrokers.github.io/tws-api/
-- **Polygon.io**: https://polygon.io/docs/
-- **TD Ameritrade**: https://developer.tdameritrade.com/
-
-### Python Libraries
-
-- **pandas**: https://pandas.pydata.org/docs/
-- **numpy**: https://numpy.org/doc/
-- **scipy**: https://docs.scipy.org/doc/scipy/
-- **scikit-learn**: https://scikit-learn.org/stable/
-
+- [Black-Scholes model](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model)
+- [scikit-learn](https://scikit-learn.org/stable/)
+- Broker APIs: [Alpaca](https://alpaca.markets/docs/),
+  [Interactive Brokers](https://interactivebrokers.github.io/tws-api/),
+  [Polygon.io](https://polygon.io/docs/)
 
 ## License
 
-This project is provided as-is for educational purposes. Check the repository for specific license terms.
-
-## Performance Tips
-
-1. **Data Loading**: Cache CSV data to avoid repeated reads
-2. **ML Training**: Use smaller `cv` parameter for faster GridSearch
-3. **Order Matching**: Pre-sort order books only when needed
-4. **Memory Usage**: Process data in chunks for large datasets
-5. **Parallelization**: Run ML models in parallel using `n_jobs=-1`
-
-## Support
-
-For issues, questions, or suggestions:
-- Check existing GitHub issues
-- Review the troubleshooting section
-- Consult the inline code documentation
-- Test with the included unit tests
-
-## Version
-
-**Current Version**: 1.1.0 (See [CHANGELOG.md](CHANGELOG.md) for details)
-
+MIT — see [LICENSE](LICENSE).

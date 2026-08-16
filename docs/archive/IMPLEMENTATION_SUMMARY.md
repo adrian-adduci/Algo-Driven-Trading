@@ -1,5 +1,16 @@
 # Implementation Summary
 
+> **⚠️ Historical document — describes release 1.1.0 only.**
+>
+> Superseded by [README.md](../../README.md) and the 1.2.0 entry in
+> [CHANGELOG.md](../../CHANGELOG.md). Instructions below reference files that no
+> longer exist (`requirements.txt`, `unit_test.py`) and will not work. Note
+> also that the "verified working" claims in this document did not hold:
+> at 1.1.0 the test suite errored on all 13 tests while still exiting 0.
+>
+> To install and test, follow the README:
+> `pip install -e ".[dev]"` then `pytest`.
+
 ## Overview
 
 This document provides a comprehensive summary of all changes, improvements, and additions made to the Algorithmic Trading System.

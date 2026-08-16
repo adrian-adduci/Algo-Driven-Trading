@@ -1,7 +1,23 @@
 # Crypto Trading Platform - Complete User Guide
 
-**Version:** 1.0
+> **⚠️ This describes a product that does not exist.**
+>
+> There is no web interface, no crypto integration, no bot runner, and no user
+> accounts in this repository. This is a **design document** — written as a
+> user guide for a proposed platform — and is the companion to
+> [CRYPTO_FRONTEND_PLAN.md](CRYPTO_FRONTEND_PLAN.md).
+>
+> Every screen, button, and workflow below is aspirational. Read it as a
+> product specification, not as instructions you can follow.
+>
+> For what the code actually does today, see [README.md](../../README.md):
+> an order matching engine, a Black-Scholes options arbitrage strategy, and a
+> rolling-window ML pipeline — all Python libraries with no UI, operating on
+> equities and options rather than crypto.
+
+**Version:** 1.0 (design draft)
 **Date:** January 9, 2026
+**Status:** Not implemented
 
 ---
 

@@ -1,40 +1,56 @@
 # Algorithmic Trading System Configuration
 # ==========================================
+#
+# ⚠️  THIS FILE IS REFERENCE DOCUMENTATION, NOT LIVE CONFIGURATION.
+#
+# No code loads this file. Editing a value here changes nothing at runtime.
+# It records intended defaults in one readable place, and doubles as the
+# specification for a future config loader.
+#
+# To actually change behaviour today, edit the named constants in the source:
+#
+#   risk_free_rate      -> RISK_FREE_RATE      in _trade_data_management.py
+#   volatility          -> VOLATILITY          in _trade_data_management.py
+#   arbitrage_threshold -> ARBITRAGE_THRESHOLD in _trade_data_management.py
+#   training_window     -> latest_sec argument to run_pipeline()
+#   prediction_window   -> pred_sec argument to run_pipeline()
+#
+# Sections marked "aspirational" below describe subsystems that do not exist.
 
 # Black-Scholes Options Pricing Parameters
+# Mirrors the module constants in _trade_data_management.py.
 options:
-  # Risk-free interest rate (annualized)
-  # Default: 0 (currently hardcoded in _trade_data_management.py)
-  # TODO: Update to current risk-free rate (e.g., 10-year Treasury yield)
+  # Risk-free interest rate (annualized).
+  # TODO: source from a real curve (e.g. 10-year Treasury yield).
   risk_free_rate: 0.0
 
-  # Implied volatility (annualized standard deviation)
-  # Default: 0.20 (20%)
-  # TODO: Calculate from historical data or use implied volatility
+  # Flat volatility assumption (annualized standard deviation).
+  # TODO: calculate from historical data or use implied volatility.
   volatility: 0.20
 
-  # Arbitrage threshold (minimum price deviation to trigger trade)
-  # Default: 0.10 ($0.10)
+  # Minimum edge in dollars before a mispricing is treated as tradeable.
   arbitrage_threshold: 0.10
 
 # Machine Learning Model Parameters
+# Passed as arguments to run_pipeline(); the model dict is caller-supplied.
 ml_trading:
-  # Training window size (seconds)
-  # Number of seconds of historical data to use for training
+  # Rows of trailing data used to train each rolling window
+  # (the `latest_sec` argument).
   training_window_seconds: 30
 
-  # Prediction window size (seconds)
-  # Number of seconds ahead to predict
+  # Rows ahead to predict and score (the `pred_sec` argument).
   prediction_window_seconds: 10
 
-  # Cross-validation folds
-  # Number of folds for GridSearchCV
+  # Folds for the GridSearchCV inside each window.
+  # NOTE: this is plain K-fold, which is not time-aware. See "Known
+  # limitations" in README.md.
   cv_folds: 2
 
-  # Random state for reproducibility
+  # Random state for reproducibility. Set per-estimator by the caller.
   random_state: 42
 
-  # Models to evaluate (set to false to disable)
+  # Illustrative model roster. The pipeline takes whatever estimator dict you
+  # hand it -- this list is not read and does not enable or disable anything.
   models:
     random_forest: true
     extra_trees: true
@@ -43,29 +59,31 @@ ml_trading:
     svc: true
 
 # Order Management Settings
+# Aspirational: the matching engine does not currently enforce any of these.
 order_management:
-  # Minimum order size (quantity)
+  # Minimum order size (quantity). Not enforced; the engine only rejects
+  # non-positive quantities.
   min_order_quantity: 1
 
-  # Price tick size (minimum price increment)
-  # Set to null for no restriction
+  # Price tick size (minimum price increment). Not enforced.
   price_tick_size: 0.01
 
-  # Maximum order book depth to maintain
+  # Maximum order book depth to maintain. Not enforced; books are unbounded.
   max_book_depth: 1000
 
 # Data Input Settings
 data:
-  # Default CSV file path for options data
-  options_data_file: "data/market_data.csv"
+  # Sample options data shipped with the repository.
+  options_data_file: "tests/data/sample_market_data.csv"
 
-  # Default CSV file path for ML training data
-  ml_training_data_file: "data/training_data.csv"
+  # No sample ML training data is shipped. Build a DataFrame where column '0'
+  # is the binary label and the remaining columns are features; see README.md.
+  ml_training_data_file: null
 
   # Timestamp format in CSV files
   timestamp_format: "%Y-%m-%d %H:%M:%S"
 
-# Risk Management (Future Implementation)
+# Risk Management (aspirational -- no risk subsystem exists)
 risk_management:
   # Maximum position size per instrument
   max_position_size: 1000
@@ -79,15 +97,16 @@ risk_management:
   # Maximum drawdown before system halt
   max_drawdown_pct: 0.10
 
-# API Integration Settings (Future Implementation)
-# These settings will be used when live trading is implemented
+# API Integration Settings (aspirational -- no live API client exists)
+# Only the CSV data adapter and the simulated broker are implemented.
 api:
   # Market data provider
-  # Options: 'alpaca', 'interactive_brokers', 'td_ameritrade', 'polygon'
+  # Options: 'alpaca', 'interactive_brokers', 'polygon'
+  # (TD Ameritrade's API was retired; its accounts moved to Schwab.)
   market_data_provider: null
 
   # Broker for order execution
-  # Options: 'alpaca', 'interactive_brokers', 'td_ameritrade'
+  # Options: 'alpaca', 'interactive_brokers'
   broker: null
 
   # API rate limiting (requests per second)
@@ -99,7 +118,7 @@ api:
   # Enable paper trading mode (simulated trading)
   paper_trading: true
 
-# Logging Settings
+# Logging Settings (aspirational -- modules print directly, no logging config)
 logging:
   # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
   level: "INFO"
