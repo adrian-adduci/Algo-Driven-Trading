@@ -12,9 +12,17 @@ import statistics
 
 import pandas as pd
 from sklearn import metrics
-from sklearn.model_selection import GridSearchCV
+from sklearn.base import clone
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 LABEL_COLUMN = "0"
+
+#: Name of the estimator step inside a scaling pipeline. Caller-supplied grid
+#: keys are rewritten into this namespace, so callers never see it.
+MODEL_STEP = "model"
+SCALER_STEP = "scaler"
 
 SUMMARY_COLUMNS = [
     "Estimator",
@@ -24,6 +32,30 @@ SUMMARY_COLUMNS = [
     "Accuracy_min",
     "F_score",
 ]
+
+
+def needs_scaling(estimator):
+    """Whether an estimator's results depend on feature magnitude.
+
+    Tree ensembles split on thresholds within a single feature at a time, so
+    rescaling cannot change which split is chosen -- scaling them is pure
+    overhead. Distance- and margin-based methods (SVMs, k-NN, and any linear
+    model with a regularisation penalty) are dominated by whichever feature
+    happens to carry the largest units unless the features are standardised.
+
+    Detection is by defining module rather than by capability, because the
+    capability checks that would seem natural do not work on an *unfitted*
+    estimator: ``feature_importances_`` is a property that raises
+    NotFittedError, so ``hasattr`` reports False for a tree ensemble that has
+    not been fit yet.
+
+    Anything already wrapped in a Pipeline is left alone -- the caller has
+    taken responsibility for preprocessing.
+    """
+    if isinstance(estimator, Pipeline):
+        return False
+    module = type(estimator).__module__
+    return module.startswith(("sklearn.svm", "sklearn.neighbors", "sklearn.linear_model"))
 
 
 class Model_Selection:
@@ -52,22 +84,56 @@ class Model_Selection:
         self.true_values_day = {}
         self.summary_day = []
         self.cv = 2
+        #: Wrap scale-sensitive estimators in a StandardScaler pipeline.
+        #: Set False to reproduce the previous unscaled behaviour.
+        self.scale_features = True
 
     def Grid_fit(self, X_train, y_train, cv=2, scoring="accuracy"):
-        """Tune hyperparameters for every model on the current training window."""
+        """Tune hyperparameters for every model on the current training window.
+
+        The search validates with TimeSeriesSplit. The rows in a window are
+        sequential observations, and the default K-fold that GridSearchCV
+        would otherwise use selects validation rows interleaved with training
+        rows -- so a model could be tuned against data that precedes what it
+        trained on.
+        """
         self.cv = cv
+        splitter = TimeSeriesSplit(n_splits=cv)
+
         for key in self.keys:
-            model = self.models[key]
-            model_grid = self.model_grid[key]
-            grid = GridSearchCV(model, model_grid, cv=cv, scoring=scoring)
+            estimator, param_grid = self._prepare(self.models[key], self.model_grid[key])
+            grid = GridSearchCV(estimator, param_grid, cv=splitter, scoring=scoring)
             grid.fit(X_train, y_train)
             self.grid[key] = grid
             self.cv_acc[key].append(grid.best_score_)
 
+    def _prepare(self, model, param_grid):
+        """Return the estimator to search over, plus its grid.
+
+        Scale-sensitive estimators are wrapped in a Pipeline with a
+        StandardScaler. Wrapping (rather than scaling X_train up front) is
+        what keeps the scaler honest: GridSearchCV refits every pipeline step
+        on each fold's training rows, so the scaler never sees the fold's
+        validation rows. Fitting a scaler on the whole window would leak its
+        range into the validation scores.
+
+        Caller grids stay in the estimator's own namespace; keys are rewritten
+        into the pipeline's namespace here.
+        """
+        if not (self.scale_features and needs_scaling(model)):
+            return model, param_grid
+
+        pipeline = Pipeline(
+            [(SCALER_STEP, StandardScaler()), (MODEL_STEP, clone(model))]
+        )
+        return pipeline, _prefix_grid(param_grid, MODEL_STEP)
+
     def model_fit(self, X_train, y_train, X_test, y_test):
         """Refit each model with its best parameters and score it on the test window."""
         for key in self.keys:
-            model = self.models[key]
+            # clone() so the search's own fitted estimator is left untouched
+            # and each window starts from a fresh, unfitted model.
+            model = clone(self.grid[key].estimator)
             model.set_params(**self.grid[key].best_params_)
             model.fit(X_train, y_train)
             predictions = model.predict(X_test)
@@ -89,6 +155,11 @@ class Model_Selection:
         ``coef_``. Kernel SVMs expose neither, so they are skipped rather than
         special-cased by estimator name.
         """
+        # Unwrap the scaling pipeline so importances resolve on the estimator
+        # itself. Scaling preserves feature order, so the names still line up.
+        if isinstance(model, Pipeline):
+            model = model.named_steps[MODEL_STEP]
+
         if hasattr(model, "feature_importances_"):
             scores = model.feature_importances_
         elif hasattr(model, "coef_"):
@@ -189,6 +260,25 @@ class Model_Selection:
         summary = pd.DataFrame(rows, columns=SUMMARY_COLUMNS)
         summary.index.rename("Ranking", inplace=True)
         return summary.sort_values(by=[sort_by], ascending=False)
+
+
+def _prefix_grid(param_grid, step):
+    """Rewrite grid keys into a pipeline step's namespace (``C`` -> ``model__C``).
+
+    Accepts either a dict or a list of dicts, matching what GridSearchCV takes.
+    Keys already addressing a pipeline step are left alone.
+    """
+    prefix = f"{step}__"
+
+    def rewrite(grid):
+        return {
+            key if key.startswith(prefix) else prefix + key: value
+            for key, value in grid.items()
+        }
+
+    if isinstance(param_grid, (list, tuple)):
+        return [rewrite(grid) for grid in param_grid]
+    return rewrite(param_grid)
 
 
 def _stdev(values):
