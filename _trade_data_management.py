@@ -479,17 +479,26 @@ def create_positions(market_data, option_names, timestamp):
     # Global function is a changing variable name based on the option
     # For option C60 it will create a variable named positions_call_C60
     # Forloop over the rows of market_data
+    # Running position per instrument, local to this call.
+    #
+    # These counters previously lived in dynamically named module-level
+    # globals (globals()['positions_call_C60'] = ...). Sequential calls
+    # happened to be safe because the names are re-initialised here on every
+    # call, but the module namespace accumulated a variable per instrument and
+    # two concurrent calls shared one set of counters, corrupting each other.
+    open_positions = {}
+
     for option in option_names:
 
         if 'C' in option:
             trades['Call Position', option] = []
             trades['Call Delta', option] = []
-            globals()['positions_call_' + option] = 0
+            open_positions[option] = 0
 
         if 'P' in option:
             trades['Put Position', option] = []
             trades['Put Delta', option] = []
-            globals()['positions_put_' + option] = 0
+            open_positions[option] = 0
 
     for _timestamp, data in market_data.iterrows():
 
@@ -517,27 +526,22 @@ def create_positions(market_data, option_names, timestamp):
 
                 call_trade = long_call_volume - short_call_volume
 
-                # Define variable, as set earlier. Note the first position is set to zero otherwise
-                # One would get an error here since the variable is then not yet defined.
-                globals()['positions_call_' + option] = call_trade + \
-                    globals()['positions_call_' + option]
+                open_positions[option] += call_trade
+                position = open_positions[option]
 
                 # Add Positions (cumulative)
-                trades['Call Position', option].append(
-                    globals()['positions_call_' + option])
+                trades['Call Position', option].append(position)
 
-                if globals()['positions_call_' + option] >= 0:
+                if position >= 0:
                     long_call_delta = data[option, 'Delta Long']
                     short_call_delta = 0
-
-                elif globals()['positions_call_' + option] < 0:
+                else:
                     short_call_delta = data[option, 'Delta Short']
                     long_call_delta = 0
 
                 # Add Deltas (cumulative)
                 trades['Call Delta', option].append(
-                    abs(globals()['positions_call_' + option])
-                    * (long_call_delta + short_call_delta))
+                    abs(position) * (long_call_delta + short_call_delta))
 
             if 'P' in option:
 
@@ -559,22 +563,20 @@ def create_positions(market_data, option_names, timestamp):
 
                 put_trade = long_put_volume - short_put_volume
 
-                globals()['positions_put_' + option] = put_trade + \
-                    globals()['positions_put_' + option]
+                open_positions[option] += put_trade
+                position = open_positions[option]
 
-                trades['Put Position', option].append(
-                    globals()['positions_put_' + option])
+                trades['Put Position', option].append(position)
 
-                if globals()['positions_put_' + option] >= 0:
+                if position >= 0:
                     long_put_delta = data[option, 'Delta Long']
                     short_put_delta = 0
-
-                elif globals()['positions_put_' + option] < 0:
+                else:
                     short_put_delta = data[option, 'Delta Short']
                     long_put_delta = 0
 
                 trades['Put Delta', option].append(
-                    abs(globals()['positions_put_' + option]) * (long_put_delta + short_put_delta))
+                    abs(position) * (long_put_delta + short_put_delta))
 
     trades = pd.DataFrame(trades).set_index('Timestamp')
 
