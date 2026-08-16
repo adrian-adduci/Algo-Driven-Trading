@@ -16,14 +16,28 @@ Key Features:
 Author: Trading System
 """
 
-from scipy import stats
+
 import numpy as np
-import io
 import pandas as pd
+from scipy import stats
 
 # Standard normal distribution functions for Black-Scholes
 _norm_cdf = stats.norm(0, 1).cdf  # Cumulative distribution function
 _norm_pdf = stats.norm(0, 1).pdf  # Probability density function
+
+# --- Strategy parameters -----------------------------------------------------
+# These were previously literals scattered through the module. They are named
+# here so they can be found and changed in one place; `config.yaml` documents
+# the same values.
+
+#: Minimum edge, in dollars, before a mispricing is treated as tradeable.
+ARBITRAGE_THRESHOLD = 0.10
+
+#: Risk-free rate used for discounting. TODO: source from a real curve.
+RISK_FREE_RATE = 0.0
+
+#: Flat volatility assumption. TODO: use historical or implied volatility.
+VOLATILITY = 0.20
 
 
 def _d1(S, K, T, r, sigma):
@@ -77,7 +91,9 @@ def call_value(S, K, T, r, sigma):
     Returns:
         float: Theoretical call option value
     """
-    return S * _norm_cdf(_d1(S, K, T, r, sigma)) - K * np.exp(-r * T) * _norm_cdf(_d2(S, K, T, r, sigma))
+    return S * _norm_cdf(_d1(S, K, T, r, sigma)) - K * np.exp(-r * T) * _norm_cdf(
+        _d2(S, K, T, r, sigma)
+    )
 
 
 def put_value(S, K, T, r, sigma):
@@ -97,7 +113,9 @@ def put_value(S, K, T, r, sigma):
     Returns:
         float: Theoretical put option value
     """
-    return np.exp(-r * T) * K * _norm_cdf(-_d2(S, K, T, r, sigma)) - S * _norm_cdf(-_d1(S, K, T, r, sigma))
+    return np.exp(-r * T) * K * _norm_cdf(-_d2(S, K, T, r, sigma)) - S * _norm_cdf(
+        -_d1(S, K, T, r, sigma)
+    )
 
 
 def call_delta(S, K, T, r, sigma):
@@ -251,7 +269,6 @@ def set_tte_to_market_data(market_data, time_to_expiry):
     """
     # Add time_to_expiry as a column
     market_data['TTE'] = time_to_expiry['TimeToExpiry']
-    timestamp = market_data.index
     # Set time to expiry as the new index
     market_data = market_data.set_index('TTE')
     return market_data
@@ -286,8 +303,8 @@ def create_df_to_store_options_values_delta(market_data, option_names):
     option_deltas = {}
 
     # Hardcoded Black-Scholes parameters
-    r = 0  # Risk-free rate (TODO: make configurable)
-    sigma = 0.20  # Volatility - 20% (TODO: calculate from historical data)
+    r = RISK_FREE_RATE
+    sigma = VOLATILITY
 
     # Forloop to create new columns with Call/Put names
     for option in option_names:
@@ -332,7 +349,7 @@ def create_df_to_store_options_values_delta(market_data, option_names):
                     put_delta(stock_value['Stock', 'AskPrice'], K, time, r, sigma))
                 short_put_deltas[option].append(-put_delta(
                     stock_value['Stock', 'BidPrice'], K, time, r, sigma))
-   
+
             # once you are iterating the loop, you can store the dictionaries
             # into options values for short call, long call for values and deltas
             option_values['Long Put', option] = long_put_values[option]
@@ -380,7 +397,7 @@ def add_blacksholes_data_to_market_data(market_data, option_names,
                         'Delta Short'] = option_deltas['Short Call', option].values
             market_data[option,
                         'Delta Long'] = option_deltas['Long Call', option].values
-    
+
         elif "P" in option:
             market_data[option,
                         'Expected AskPrice'] = option_values['Short Put', option]
@@ -415,19 +432,21 @@ def option_opportunities(option, market_data):
     Returns:
         tuple: (short_opportunities DataFrame, long_opportunities DataFrame)
     """
-    if "C" in option:
-        expected1 = market_data[option][(market_data[option, 'BidPrice'] - market_data[option,
-                                                                                       'Expected AskPrice']) >= 0.10].drop('Expected BidPrice', axis=1)
-        expected2 = market_data[option][(market_data[option, 'Expected BidPrice'] -
-                                         market_data[option, 'AskPrice']) >= 0.10].drop('Expected AskPrice', axis=1)
+    quotes = market_data[option]
 
-    elif "P" in option:
-        expected1 = market_data[option][(market_data[option, 'BidPrice'] - market_data[option,
-                                                                                       'Expected AskPrice']) >= 0.10].drop('Expected BidPrice', axis=1)
-        expected2 = market_data[option][(market_data[option, 'Expected BidPrice'] -
-                                         market_data[option, 'AskPrice']) >= 0.10].drop('Expected AskPrice', axis=1)
+    # Sell the option: the market is bidding more than it is theoretically worth.
+    short_edge = quotes['BidPrice'] - quotes['Expected AskPrice']
+    short_opportunities = quotes[short_edge >= ARBITRAGE_THRESHOLD].drop(
+        'Expected BidPrice', axis=1
+    )
 
-    return expected1,expected2
+    # Buy the option: the market is offering it below its theoretical value.
+    long_edge = quotes['Expected BidPrice'] - quotes['AskPrice']
+    long_opportunities = quotes[long_edge >= ARBITRAGE_THRESHOLD].drop(
+        'Expected AskPrice', axis=1
+    )
+
+    return short_opportunities, long_opportunities
 
 
 def create_positions(market_data, option_names, timestamp):
@@ -466,92 +485,97 @@ def create_positions(market_data, option_names, timestamp):
             trades['Call Position', option] = []
             trades['Call Delta', option] = []
             globals()['positions_call_' + option] = 0
-    
+
         if 'P' in option:
             trades['Put Position', option] = []
             trades['Put Delta', option] = []
             globals()['positions_put_' + option] = 0
 
-    for time, data in market_data.iterrows():
+    for _timestamp, data in market_data.iterrows():
 
-        max_delta = min(data['Stock', 'AskVolume'], data['Stock', 'BidVolume'])
-    
         # Forloop over the option_names with conditions
         # if-statements if Call or Put + if Short/Long in Call or Put
         for option in option_names:
-    
+
             if 'C' in option:
-    
+
                 # Short Call
-                if (data[option, 'BidPrice'] - data[option, 'Expected AskPrice']) >= 0.10:
+                short_edge = data[option, 'BidPrice'] - data[option, 'Expected AskPrice']
+                if short_edge >= ARBITRAGE_THRESHOLD:
                     short_call_volume = data[option, 'BidVolume']
                     long_call_volume = 0
-    
+
                 # Long Call
-                elif (data[option, 'Expected BidPrice'] - data[option, 'AskPrice']) >= 0.10:
+                elif (
+                    data[option, 'Expected BidPrice'] - data[option, 'AskPrice']
+                ) >= ARBITRAGE_THRESHOLD:
                     long_call_volume = data[option, 'AskVolume']
                     short_call_volume = 0
-    
+
                 else:
                     long_call_volume = short_call_volume = 0
-    
+
                 call_trade = long_call_volume - short_call_volume
-    
+
                 # Define variable, as set earlier. Note the first position is set to zero otherwise
                 # One would get an error here since the variable is then not yet defined.
                 globals()['positions_call_' + option] = call_trade + \
                     globals()['positions_call_' + option]
-    
+
                 # Add Positions (cumulative)
                 trades['Call Position', option].append(
                     globals()['positions_call_' + option])
-    
+
                 if globals()['positions_call_' + option] >= 0:
                     long_call_delta = data[option, 'Delta Long']
                     short_call_delta = 0
-    
+
                 elif globals()['positions_call_' + option] < 0:
                     short_call_delta = data[option, 'Delta Short']
                     long_call_delta = 0
-    
+
                 # Add Deltas (cumulative)
                 trades['Call Delta', option].append(
-                    abs(globals()['positions_call_' + option]) * (long_call_delta + short_call_delta))
-    
+                    abs(globals()['positions_call_' + option])
+                    * (long_call_delta + short_call_delta))
+
             if 'P' in option:
-    
+
                 # Short Put
-                if (data[option, 'BidPrice'] - data[option, 'Expected AskPrice']) >= 0.10:
+                short_edge = data[option, 'BidPrice'] - data[option, 'Expected AskPrice']
+                if short_edge >= ARBITRAGE_THRESHOLD:
                     short_put_volume = data[option, 'BidVolume']
                     long_put_volume = 0
-    
+
                 # Long Put
-                elif (data[option, 'Expected BidPrice'] - data[option, 'AskPrice']) >= 0.10:
+                elif (
+                    data[option, 'Expected BidPrice'] - data[option, 'AskPrice']
+                ) >= ARBITRAGE_THRESHOLD:
                     long_put_volume = data[option, 'AskVolume']
                     short_put_volume = 0
-    
+
                 else:
                     long_put_volume = short_put_volume = 0
-    
+
                 put_trade = long_put_volume - short_put_volume
-    
+
                 globals()['positions_put_' + option] = put_trade + \
                     globals()['positions_put_' + option]
-    
+
                 trades['Put Position', option].append(
                     globals()['positions_put_' + option])
-    
+
                 if globals()['positions_put_' + option] >= 0:
                     long_put_delta = data[option, 'Delta Long']
                     short_put_delta = 0
-    
+
                 elif globals()['positions_put_' + option] < 0:
                     short_put_delta = data[option, 'Delta Short']
                     long_put_delta = 0
-    
+
                 trades['Put Delta', option].append(
-                    abs(globals()['positions_put_' + option]) * (long_put_delta + short_put_delta))     
-    
+                    abs(globals()['positions_put_' + option]) * (long_put_delta + short_put_delta))
+
     trades = pd.DataFrame(trades).set_index('Timestamp')
 
     # Sort Columns
@@ -590,13 +614,15 @@ def create_orders(positions):
     """
     # Create trades_diff dataframe that gives all actual trades (not positions)
     trades_diff = positions.diff()[1:].drop(
-    ['Call Delta', 'Put Delta', 'Time to Expiry', 'Total Option Delta', 'Remaining Option Delta'], axis=1)
+    ['Call Delta', 'Put Delta', 'Time to Expiry', 'Total Option Delta',
+     'Remaining Option Delta'], axis=1)
 
     # Drop the 'Call Position','Put Position' and 'Stock Position' top level
     # Makes forlooping easier
     trades_diff.columns = trades_diff.columns.droplevel(level=0)
 
-    # Since positions are not neccesarily zero at the last timestamp, final positions are calculated to be able to valuate these
+    # Positions are not necessarily zero at the last timestamp, so final
+    # positions are captured to allow them to be valued.
     final_positions = positions[-1:].drop(['Call Delta', 'Put Delta', 'Time to Expiry',
                                         'Total Option Delta', 'Remaining Option Delta'], axis=1)
 

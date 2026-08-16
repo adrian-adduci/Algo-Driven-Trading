@@ -10,9 +10,9 @@ Future Implementation: Add concrete adapters for real broker APIs
 """
 
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import List, Dict, Optional
 from datetime import datetime
+from enum import Enum
+
 import _order_management as om
 
 
@@ -100,7 +100,7 @@ class BrokerAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_order_status(self, order_id: str) -> Dict:
+    def get_order_status(self, order_id: str) -> dict:
         """
         Get status of an order.
 
@@ -114,7 +114,7 @@ class BrokerAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_open_orders(self) -> List[Dict]:
+    def get_open_orders(self) -> list[dict]:
         """
         Get all open orders.
 
@@ -124,7 +124,7 @@ class BrokerAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_positions(self) -> Dict[str, int]:
+    def get_positions(self) -> dict[str, int]:
         """
         Get current positions.
 
@@ -134,7 +134,7 @@ class BrokerAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_account_info(self) -> Dict:
+    def get_account_info(self) -> dict:
         """
         Get account information.
 
@@ -438,7 +438,11 @@ class SimulatedBrokerAdapter(BrokerAdapter):
                     self.positions[fill.symbol] = self.positions.get(fill.symbol, 0) + qty_change
 
                     # Update cash (simplified, doesn't account for commissions)
-                    cash_change = -fill.quantity * fill.price if fill.side == om.OrderSide.BUY else fill.quantity * fill.price
+                    cash_change = (
+                        -fill.quantity * fill.price
+                        if fill.side == om.OrderSide.BUY
+                        else fill.quantity * fill.price
+                    )
                     self.cash += cash_change
             else:
                 # Check if order is resting in book or was rejected
@@ -486,7 +490,7 @@ class SimulatedBrokerAdapter(BrokerAdapter):
             print(f"Modify failed: {e}")
             return False
 
-    def get_order_status(self, order_id: str) -> Dict:
+    def get_order_status(self, order_id: str) -> dict:
         """Get order status from simulated broker."""
         if order_id not in self.submitted_orders:
             return {'status': OrderStatus.REJECTED.value, 'error': 'Order not found'}
@@ -505,7 +509,7 @@ class SimulatedBrokerAdapter(BrokerAdapter):
             'submitted_at': datetime.fromtimestamp(order.time)
         }
 
-    def get_open_orders(self) -> List[Dict]:
+    def get_open_orders(self) -> list[dict]:
         """Get all open orders in simulated broker."""
         open_orders = []
         for order_id, status in self.order_status.items():
@@ -521,11 +525,11 @@ class SimulatedBrokerAdapter(BrokerAdapter):
                 })
         return open_orders
 
-    def get_positions(self) -> Dict[str, int]:
+    def get_positions(self) -> dict[str, int]:
         """Get current positions in simulated broker."""
         return self.positions.copy()
 
-    def get_account_info(self) -> Dict:
+    def get_account_info(self) -> dict:
         """Get account information from simulated broker."""
         # Calculate portfolio value (simplified)
         portfolio_value = self.cash

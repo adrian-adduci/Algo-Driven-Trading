@@ -10,9 +10,8 @@ Future Implementation: Add concrete adapters for real-time market data APIs
 """
 
 from abc import ABC, abstractmethod
+
 import pandas as pd
-from typing import List, Dict, Optional
-from datetime import datetime
 
 
 class MarketDataAdapter(ABC):
@@ -44,7 +43,7 @@ class MarketDataAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_stock_quote(self, symbol: str) -> Dict:
+    def get_stock_quote(self, symbol: str) -> dict:
         """
         Get real-time stock quote.
 
@@ -90,7 +89,7 @@ class MarketDataAdapter(ABC):
         pass
 
     @abstractmethod
-    def subscribe_realtime(self, symbols: List[str], callback) -> bool:
+    def subscribe_realtime(self, symbols: list[str], callback) -> bool:
         """
         Subscribe to real-time data stream.
 
@@ -322,7 +321,7 @@ class CSVDataAdapter(MarketDataAdapter):
         self.connected = False
         return True
 
-    def get_stock_quote(self, symbol: str) -> Dict:
+    def get_stock_quote(self, symbol: str) -> dict:
         """
         Get stock quote from CSV data (returns first row).
 
@@ -369,7 +368,7 @@ class CSVDataAdapter(MarketDataAdapter):
 
         return self.data.copy()
 
-    def subscribe_realtime(self, symbols: List[str], callback) -> bool:
+    def subscribe_realtime(self, symbols: list[str], callback) -> bool:
         """
         Not supported for CSV adapter.
 
