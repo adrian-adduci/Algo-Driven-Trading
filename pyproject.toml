@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "algo-driven-trading"
+version = "1.2.0"
+description = "Educational algorithmic trading system: order matching, Black-Scholes options arbitrage, and ML trade prediction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Adrian Adduci" }]
+keywords = ["trading", "order-book", "black-scholes", "options", "machine-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+# Only what the code actually imports. PyYAML and python-dotenv were previously
+# listed but never imported -- config.yaml and .env.example are reference
+# documents, not runtime configuration. Add them back when a loader exists.
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+# Live market data / broker integrations. None are required to run the
+# simulator, the tests, or any of the examples.
+brokers = [
+    "alpaca-py>=0.20",
+    "ib-insync>=0.9.86",
+]
+data = [
+    "polygon-api-client>=1.14",
+    "yfinance>=0.2.40",
+]
+
+[project.urls]
+Repository = "https://github.com/adrian-adduci/Algo-Driven-Trading"
+
+[tool.setuptools]
+py-modules = [
+    "_order_management",
+    "_trade_data_management",
+    "_trade_management",
+    "data_adapters",
+    "broker_adapters",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E741", # ambiguous variable names (K, S, T are standard Black-Scholes notation)
+    "B024", # Order is a shared-attribute base, never instantiated directly;
+            # adding an @abstractmethod would change the public subclass contract
+]
