@@ -293,17 +293,26 @@ Honest accounting of what this does not do:
 1. **No live data or execution** — CSV in, simulated fills out.
 2. **Flat rate and volatility** — no yield curve, no implied or historical vol.
 3. **No transaction costs, slippage, or margin** — fills are frictionless.
-4. **Inner CV is not time-aware** — the walk-forward train/test split is correct,
-   but `GridSearchCV` inside it uses default K-fold, which interleaves
-   validation rows in time. `TimeSeriesSplit` would be the correct choice.
-5. **No feature scaling** — distance/kernel-based estimators (e.g. SVC) are
-   handicapped relative to the tree ensembles they are ranked against.
-6. **`create_positions` uses module-level globals** for per-instrument state,
-   so it is not reentrant and leaks state between calls.
-7. **`create_orders` drops the opening row** (`positions.diff()[1:]`), so a
+4. **`create_orders` drops the opening row** (`positions.diff()[1:]`), so a
    position established at the first timestamp is never emitted as an order.
-8. **Single underlying** — the options module assumes one stock.
-9. **No persistence** — order books are in-memory only.
+5. **`create_positions` requires both calls and puts** — it unconditionally
+   sums a `Call Delta` and a `Put Delta` block, so an instrument universe
+   containing only one kind raises `KeyError`.
+6. **Single underlying** — the options module assumes one stock.
+7. **No persistence** — order books are in-memory only.
+
+### Previously listed, now fixed
+
+- *Inner CV was not time-aware.* `GridSearchCV` now validates with
+  `TimeSeriesSplit`, so hyperparameters are never tuned against rows that
+  precede the rows the model trained on.
+- *No feature scaling.* Scale-sensitive estimators (SVM, k-NN, linear models)
+  are wrapped in a `StandardScaler` pipeline, so the scaler is refit per fold
+  and never sees its own validation rows. Tree ensembles are left unwrapped,
+  since they are scale-invariant.
+- *`create_positions` used module-level globals.* Position state is now a
+  local dict, so the module namespace stays clean and concurrent calls no
+  longer share counters.
 
 ## References
 
